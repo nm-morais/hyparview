@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	protoID = 2000
+	protoID = 1000
 	name    = "Hyparview"
 )
 
@@ -90,6 +90,7 @@ func (h *Hyparview) Init() {
 
 func (h *Hyparview) Start() {
 	h.babel.RegisterTimer(h.ID(), ShuffleTimer{duration: 3 * time.Second})
+	h.babel.RegisterPeriodicTimer(h.ID(), PromoteTimer{duration: 7 * time.Second})
 }
 
 func (h *Hyparview) joinOverlay() {
@@ -167,8 +168,8 @@ func (h *Hyparview) MessageDelivered(msg message.Message, p peer.Peer) {
 
 func (h *Hyparview) MessageDeliveryErr(msg message.Message, p peer.Peer, err errors.Error) {
 	h.logger.Warnf("Message %s was not sent to %s because: %s", reflect.TypeOf(msg), p.String(), err.Reason())
-	switch msg.(type) {
-	case NeighbourMessage:
+	_, isNeighMsg := msg.(NeighbourMessage)
+	if isNeighMsg {
 		h.handleNodeDown(p)
 	}
 }

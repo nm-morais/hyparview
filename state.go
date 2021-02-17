@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 
 	"github.com/nm-morais/go-babel/pkg/peer"
@@ -15,7 +16,7 @@ func (v View) size() int {
 	return len(v.peers)
 }
 
-func (v View) contains(p peer.Peer) bool {
+func (v View) contains(p fmt.Stringer) bool {
 	_, ok := v.peers[p.String()]
 	return ok
 }
@@ -49,7 +50,7 @@ func (v View) add(p *PeerState, dropIfFull bool) {
 	}
 }
 
-func (v View) remove(p peer.Peer) (existed bool) {
+func (v View) remove(p fmt.Stringer) (existed bool) {
 	_, existed = v.peers[p.String()]
 	if existed {
 		delete(v.peers, p.String())
