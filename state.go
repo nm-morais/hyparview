@@ -34,8 +34,7 @@ func (v View) dropRandom() *PeerState {
 	return nil
 }
 
-func (v View) add(p *PeerState, dropIfFull bool) (added bool) {
-
+func (v View) add(p *PeerState, dropIfFull bool) {
 	if v.isFull() {
 		if dropIfFull {
 			v.dropRandom()
@@ -48,7 +47,6 @@ func (v View) add(p *PeerState, dropIfFull bool) (added bool) {
 	if !alreadyExists {
 		v.peers[p.String()] = p
 	}
-	return !alreadyExists
 }
 
 func (v View) remove(p peer.Peer) (existed bool) {
@@ -100,13 +98,6 @@ type PeerState struct {
 type HyparviewState struct {
 	activeView  View
 	passiveView View
-}
-
-func NewHyparviewState() *HyparviewState {
-	return &HyparviewState{
-		activeView:  View{},
-		passiveView: View{},
-	}
 }
 
 func (h *Hyparview) addPeerToActiveView(newPeer peer.Peer) {

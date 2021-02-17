@@ -77,6 +77,8 @@ func (h *Hyparview) Logger() *logrus.Logger {
 
 func (h *Hyparview) Init() {
 	h.babel.RegisterTimerHandler(protoID, ShuffleTimerID, h.HandleShuffleTimer)
+	h.babel.RegisterTimerHandler(protoID, PromoteTimerID, h.HandlePromoteTimer)
+
 	h.babel.RegisterMessageHandler(protoID, JoinMessage{}, h.HandleJoinMessage)
 	h.babel.RegisterMessageHandler(protoID, ForwardJoinMessage{}, h.HandleForwardJoinMessage)
 	h.babel.RegisterMessageHandler(protoID, ShuffleMessage{}, h.HandleShuffleMessage)
@@ -88,7 +90,6 @@ func (h *Hyparview) Init() {
 
 func (h *Hyparview) Start() {
 	h.babel.RegisterTimer(h.ID(), ShuffleTimer{duration: 3 * time.Second})
-
 }
 
 func (h *Hyparview) joinOverlay() {
@@ -124,6 +125,19 @@ func (h *Hyparview) DialFailed(p peer.Peer) {
 
 func (h *Hyparview) handleNodeDown(p peer.Peer) {
 	h.activeView.remove(p)
+	if !h.activeView.isFull() {
+		if h.passiveView.size() == 0 {
+			h.joinOverlay()
+			return
+		}
+		newNeighbor := h.passiveView.getRandomElementsFromView(1)
+		h.logger.Warnf("replacing downed with node %s from passive view", newNeighbor[0].String())
+		h.passiveView.remove(newNeighbor[0])
+		h.sendMessageTmpTransport(NeighbourMessage{
+			HighPrio: h.activeView.size() <= 1, // TODO review this
+		}, newNeighbor[0])
+	}
+
 	h.logHyparviewState()
 }
 
@@ -153,6 +167,10 @@ func (h *Hyparview) MessageDelivered(msg message.Message, p peer.Peer) {
 
 func (h *Hyparview) MessageDeliveryErr(msg message.Message, p peer.Peer, err errors.Error) {
 	h.logger.Warnf("Message %s was not sent to %s because: %s", reflect.TypeOf(msg), p.String(), err.Reason())
+	switch msg.(type) {
+	case NeighbourMessage:
+		h.handleNodeDown(p)
+	}
 }
 
 // ---------------- Protocol handlers (messages) ----------------
@@ -184,7 +202,9 @@ func (h *Hyparview) HandleForwardJoinMessage(sender peer.Peer, msg message.Messa
 	h.logger.Infof("Received forward join message with ttl = %d from %s", fwdJoinMsg.TTL, sender.String())
 
 	if fwdJoinMsg.TTL == 0 || h.activeView.size() == 1 {
-		h.logger.Infof("Accepting forwardJoin message from %s, fwdJoinMsg.TTL == 0 || h.activeView.size() == 1", fwdJoinMsg.OriginalSender.String())
+		h.logger.Infof(`Accepting forwardJoin message from %s,
+		 fwdJoinMsg.TTL == 0 || h.activeView.size() == 1`, fwdJoinMsg.OriginalSender.String())
+
 		h.addPeerToActiveView(fwdJoinMsg.OriginalSender)
 		return
 	}
@@ -246,7 +266,6 @@ func (h *Hyparview) HandleNeighbourMessage(sender peer.Peer, msg message.Message
 	}
 	h.sendMessageTmpTransport(reply, sender)
 	h.addPeerToActiveView(sender)
-
 }
 
 func (h *Hyparview) HandleNeighbourReplyMessage(sender peer.Peer, msg message.Message) {
@@ -284,7 +303,7 @@ func (h *Hyparview) HandleShuffleMessage(sender peer.Peer, msg message.Message) 
 	h.sendMessageTmpTransport(reply, sender)
 }
 
-func (h *Hyparview) mergeShuffleMsgPeersWithPassiveView(shuffleMsgPeers []peer.Peer, peersToKickFirst []peer.Peer) {
+func (h *Hyparview) mergeShuffleMsgPeersWithPassiveView(shuffleMsgPeers, peersToKickFirst []peer.Peer) {
 	for _, receivedHost := range shuffleMsgPeers {
 		if h.babel.SelfPeer().String() == receivedHost.String() {
 			continue
@@ -312,24 +331,21 @@ func (h *Hyparview) mergeShuffleMsgPeersWithPassiveView(shuffleMsgPeers []peer.P
 
 func (h *Hyparview) HandleShuffleReplyMessage(sender peer.Peer, m message.Message) {
 	shuffleReplyMsg := m.(ShuffleReplyMessage)
-	h.logger.Info("Received shuffle reply message %+v", shuffleReplyMsg)
+	h.logger.Infof("Received shuffle reply message %+v", shuffleReplyMsg)
 	h.mergeShuffleMsgPeersWithPassiveView(shuffleReplyMsg.Peers, h.lastShuffleMsg.Peers)
 	h.lastShuffleMsg = nil
 }
 
 // ---------------- Protocol handlers (timers) ----------------
 
-func (h *Hyparview) HandleShuffleTimer(t timer.Timer) {
-	h.logger.Info("Shuffle timer trigger")
-	toWait := time.Duration(h.conf.MinShuffleTimerDurationSeconds)*time.Second + time.Duration(float32(time.Second)*rand.Float32())
-	h.babel.RegisterTimer(h.ID(), ShuffleTimer{duration: toWait})
+func (h *Hyparview) HandlePromoteTimer(t timer.Timer) {
+	h.logger.Info("Promote timer trigger")
 
 	if time.Since(h.timeStart) > time.Duration(h.conf.joinTimeSeconds)*time.Second {
 		if h.activeView.size() == 0 && h.passiveView.size() == 0 && !h.selfIsBootstrap {
 			h.joinOverlay()
 			return
 		}
-
 		if !h.activeView.isFull() && h.passiveView.size() > 0 {
 			h.logger.Warn("Promoting node from passive view to active view")
 			newNeighbor := h.passiveView.getRandomElementsFromView(1)
@@ -338,6 +354,12 @@ func (h *Hyparview) HandleShuffleTimer(t timer.Timer) {
 			}, newNeighbor[0])
 		}
 	}
+}
+
+func (h *Hyparview) HandleShuffleTimer(t timer.Timer) {
+	h.logger.Info("Shuffle timer trigger")
+	toWait := time.Duration(h.conf.MinShuffleTimerDurationSeconds)*time.Second + time.Duration(float32(time.Second)*rand.Float32())
+	h.babel.RegisterTimer(h.ID(), ShuffleTimer{duration: toWait})
 
 	if h.activeView.size() == 0 {
 		h.logger.Info("No nodes to send shuffle message message to")
