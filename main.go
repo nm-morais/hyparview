@@ -17,7 +17,7 @@ type HyparviewConfig struct {
 		Port int    `yaml:"port"`
 		Host string `yaml:"host"`
 	} `yaml:"self"`
-	BootstrapPeer struct {
+	BootstrapPeers []struct {
 		Port int    `yaml:"port"`
 		Host string `yaml:"host"`
 	} `yaml:"bootstrap"`
@@ -47,12 +47,10 @@ func main() {
 		Peer:      peer.NewPeer(net.ParseIP(conf.SelfPeer.Host), uint16(conf.SelfPeer.Port), 0),
 	}
 
-	contactNode := peer.NewPeer(net.ParseIP(conf.BootstrapPeer.Host), uint16(conf.SelfPeer.Port), 0)
-
 	p := babel.NewProtoManager(protoManagerConf)
 	p.RegisterListenAddr(&net.TCPAddr{IP: protoManagerConf.Peer.IP(), Port: int(protoManagerConf.Peer.ProtosPort())})
 	p.RegisterListenAddr(&net.UDPAddr{IP: protoManagerConf.Peer.IP(), Port: int(protoManagerConf.Peer.ProtosPort())})
-	p.RegisterProtocol(NewHyparviewProtocol(contactNode, p, &conf))
+	p.RegisterProtocol(NewHyparviewProtocol(p, &conf))
 	p.StartSync()
 }
 
