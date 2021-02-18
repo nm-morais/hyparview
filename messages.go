@@ -32,8 +32,10 @@ func (DisconnectMessage) Serializer() message.Serializer { return defaultDisconn
 func (DisconnectMessage) Deserializer() message.Deserializer {
 	return defaultDisconnectMessageSerializer
 }
-func (disconnectMessageSerializer) Serialize(msg message.Message) []byte        { return []byte{} }
-func (disconnectMessageSerializer) Deserialize(msgBytes []byte) message.Message { return JoinMessage{} }
+func (disconnectMessageSerializer) Serialize(msg message.Message) []byte { return []byte{} }
+func (disconnectMessageSerializer) Deserialize(msgBytes []byte) message.Message {
+	return DisconnectMessage{}
+}
 
 const ForwardJoinMessageType = 2002
 
@@ -67,7 +69,30 @@ func (forwardJoinMessageSerializer) Deserialize(msgBytes []byte) message.Message
 	}
 }
 
-const NeighbourMessageType = 2003
+const ForwardJoinMessageReplyType = 2003
+
+type ForwardJoinMessageReply struct {
+}
+type forwardJoinMessageReplySerializer struct{}
+
+var defaultForwardJoinMessageReplySerializer = forwardJoinMessageReplySerializer{}
+
+func (ForwardJoinMessageReply) Type() message.ID { return ForwardJoinMessageReplyType }
+func (ForwardJoinMessageReply) Serializer() message.Serializer {
+	return defaultForwardJoinMessageReplySerializer
+}
+func (ForwardJoinMessageReply) Deserializer() message.Deserializer {
+	return defaultForwardJoinMessageReplySerializer
+}
+func (forwardJoinMessageReplySerializer) Serialize(msg message.Message) []byte {
+	return []byte{}
+}
+
+func (forwardJoinMessageReplySerializer) Deserialize(msgBytes []byte) message.Message {
+	return ForwardJoinMessageReply{}
+}
+
+const NeighbourMessageType = 2004
 
 type NeighbourMessage struct {
 	HighPrio bool
@@ -99,7 +124,7 @@ func (neighbourMessageSerializer) Deserialize(msgBytes []byte) message.Message {
 	}
 }
 
-const NeighbourMessageReplyType = 2004
+const NeighbourMessageReplyType = 2005
 
 type NeighbourMessageReply struct {
 	Accepted bool
@@ -133,7 +158,7 @@ func (neighbourMessageReplySerializer) Deserialize(msgBytes []byte) message.Mess
 	}
 }
 
-const ShuffleMessageType = 2005
+const ShuffleMessageType = 2006
 
 type ShuffleMessage struct {
 	ID    uint32
@@ -152,12 +177,11 @@ func (ShuffleMessage) Deserializer() message.Deserializer {
 	return defaultShuffleMessageSerializer
 }
 func (ShuffleMessageSerializer) Serialize(msg message.Message) []byte {
-	msgBytes := make([]byte, 12)
+	msgBytes := make([]byte, 8)
 	shuffleMsg := msg.(ShuffleMessage)
 	binary.BigEndian.PutUint32(msgBytes[0:4], shuffleMsg.ID)
 	binary.BigEndian.PutUint32(msgBytes[4:8], shuffleMsg.TTL)
-	peer.SerializePeerArray(shuffleMsg.Peers)
-	return msgBytes
+	return append(msgBytes, peer.SerializePeerArray(shuffleMsg.Peers)...)
 }
 
 func (ShuffleMessageSerializer) Deserialize(msgBytes []byte) message.Message {
@@ -171,7 +195,7 @@ func (ShuffleMessageSerializer) Deserialize(msgBytes []byte) message.Message {
 	}
 }
 
-const ShuffleReplyMessageType = 2006
+const ShuffleReplyMessageType = 2007
 
 type ShuffleReplyMessage struct {
 	ID    uint32

@@ -59,7 +59,7 @@ func (v View) remove(p fmt.Stringer) (existed bool) {
 }
 
 func (v View) isFull() bool {
-	return len(v.peers) == v.capacity
+	return len(v.peers) >= v.capacity
 }
 
 func (v View) toArray() []*PeerState {
@@ -93,7 +93,6 @@ func (v View) getRandomElementsFromView(amount int, exclusions ...peer.Peer) []p
 type PeerState struct {
 	peer.Peer
 	outConnected bool
-	inConnected  bool
 }
 
 type HyparviewState struct {
@@ -101,32 +100,33 @@ type HyparviewState struct {
 	passiveView View
 }
 
-func (h *Hyparview) addPeerToActiveView(newPeer peer.Peer) {
+func (h *Hyparview) addPeerToActiveView(newPeer peer.Peer) bool {
 	if peer.PeersEqual(h.babel.SelfPeer(), newPeer) {
 		h.logger.Panic("Trying to add self to active view")
 	}
 
-	if h.activeView.isFull() {
-		h.logger.Panic("Cannot add node to active pool because it is full")
+	if h.activeView.contains(newPeer) {
+		h.logger.Warnf("trying to add node %s already in active view", newPeer.String())
+		return false
 	}
 
-	if h.activeView.contains(newPeer) {
-		h.logger.Panic("Trying to add node already in view")
+	if h.activeView.isFull() {
+		h.dropRandomElemFromActiveView()
 	}
 
 	if h.passiveView.contains(newPeer) {
-		h.logger.Panic("Trying to add node to active view already in passive view")
+		h.passiveView.remove(newPeer)
+		h.logger.Warnf("Removed node %s from passive view", newPeer.String())
 	}
 
 	h.logger.Warnf("Added peer %s to active view", newPeer.String())
 	h.activeView.add(&PeerState{
 		Peer:         newPeer,
 		outConnected: false,
-		inConnected:  false,
 	}, false)
-	h.logger.Infof("dialing new node %s", newPeer.String())
 	h.babel.Dial(h.ID(), newPeer, newPeer.ToTCPAddr())
 	h.logHyparviewState()
+	return true
 }
 
 func (h *Hyparview) addPeerToPassiveView(newPeer peer.Peer) {
@@ -135,13 +135,13 @@ func (h *Hyparview) addPeerToPassiveView(newPeer peer.Peer) {
 	}
 
 	if h.activeView.contains(newPeer) {
-		h.logger.Panic("Trying to add node to passive view which is in active view")
+		h.logger.Warn("Trying to add node to passive view which is in active view")
+		return
 	}
 
 	h.passiveView.add(&PeerState{
 		Peer:         newPeer,
 		outConnected: false,
-		inConnected:  false,
 	}, true)
 	h.logger.Warnf("Added peer %s to passive view", newPeer.String())
 	h.logHyparviewState()

@@ -1,0 +1,17 @@
+---
+activeViewSize: 5
+arwl: 3
+bootstrapPeers:
+  - host: "127.0.0.1"
+    port: 1200
+dialTimeoutMiliseconds: 3000
+joinTimeSeconds: 5
+ka: 2
+kp: 3
+logFolder: logs/
+minShuffleTimerDurationSeconds: 8
+passiveViewSize: 25
+pwrl: 6
+self:
+  host: "127.0.0.1"
+  port: 1200

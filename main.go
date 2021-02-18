@@ -2,6 +2,9 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"io/ioutil"
+	"log"
 	"net"
 	"os"
 	"time"
@@ -12,39 +15,48 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type HyparviewConfig struct {
-	SelfPeer struct {
-		Port int    `yaml:"port"`
-		Host string `yaml:"host"`
-	} `yaml:"self"`
-	BootstrapPeers []struct {
-		Port int    `yaml:"port"`
-		Host string `yaml:"host"`
-	} `yaml:"bootstrap"`
-	dialTimeoutMiliseconds int    `yaml:"dialTimeoutMiliseconds"`
-	LogFolder              string `yaml:"logFolder"`
-	joinTimeSeconds        int    `yaml:"joinTimeSeconds"`
-
-	activeViewSize  int `yaml:"activeView"`
-	passiveViewSize int `yaml:"passiveView"`
-	ARWL            int `yaml:"arwl"`
-	PRWL            int `yaml:"pwrl"`
-
-	Ka int `yaml:"ka"`
-	Kp int `yaml:"kp"`
-
-	MinShuffleTimerDurationSeconds int `yaml:"minShuffleTimerDurationSeconds"`
-}
+var (
+	randomPort *bool
+)
 
 func main() {
+	randomPort = flag.Bool("rport", false, "choose random port")
+
 	flag.Parse()
+
 	conf := readConfFile()
+
+	if *randomPort {
+		fmt.Println("Setting custom port")
+		freePort, err := GetFreePort()
+		if err != nil {
+			panic(err)
+		}
+		conf.SelfPeer.Port = freePort
+	}
+
+	content, err := ioutil.ReadFile("exampleConfig.yml")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Convert []byte to string and print to screen
+	text := string(content)
+	fmt.Println(text)
+	if err != nil {
+		panic(err)
+	}
+	conf.LogFolder += fmt.Sprintf("%s_%d/", conf.SelfPeer.Host, conf.SelfPeer.Port)
 
 	protoManagerConf := babel.Config{
 		Silent:    false,
 		LogFolder: conf.LogFolder,
-		SmConf:    babel.StreamManagerConf{DialTimeout: time.Millisecond * time.Duration(conf.dialTimeoutMiliseconds)},
-		Peer:      peer.NewPeer(net.ParseIP(conf.SelfPeer.Host), uint16(conf.SelfPeer.Port), 0),
+		SmConf: babel.StreamManagerConf{
+			BatchMaxSizeBytes: 2000,
+			BatchTimeout:      time.Second,
+			DialTimeout:       time.Millisecond * time.Duration(conf.DialTimeoutMiliseconds),
+		},
+		Peer: peer.NewPeer(net.ParseIP(conf.SelfPeer.Host), uint16(conf.SelfPeer.Port), 0),
 	}
 
 	p := babel.NewProtoManager(protoManagerConf)
@@ -73,6 +85,17 @@ func readConfFile() HyparviewConfig {
 	if err != nil {
 		panic(err)
 	}
-
 	return cfg
+}
+
+func GetFreePort() (port int, err error) {
+	var a *net.TCPAddr
+	if a, err = net.ResolveTCPAddr("tcp", "localhost:0"); err == nil {
+		var l *net.TCPListener
+		if l, err = net.ListenTCP("tcp", a); err == nil {
+			defer l.Close()
+			return l.Addr().(*net.TCPAddr).Port, nil
+		}
+	}
+	return
 }
