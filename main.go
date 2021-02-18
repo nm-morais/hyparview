@@ -20,11 +20,13 @@ import (
 var (
 	randomPort *bool
 	bootstraps *string
+	listenIP   *string
 )
 
 func main() {
 	randomPort = flag.Bool("rport", false, "choose random port")
 	bootstraps = flag.String("bootstraps", "", "choose custom bootstrap nodes (space-separated ip:port list)")
+	listenIP = flag.String("listenIP", "", "choose custom ip to listen to")
 
 	flag.Parse()
 
@@ -39,6 +41,9 @@ func main() {
 		conf.SelfPeer.Port = freePort
 	}
 	ParseBootstrapArg(bootstraps, conf)
+	if listenIP != nil && *listenIP != "" {
+		conf.SelfPeer.Host = *listenIP
+	}
 
 	content, err := ioutil.ReadFile("config/exampleConfig.yml")
 	if err != nil {
