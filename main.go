@@ -7,6 +7,8 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	babel "github.com/nm-morais/go-babel/pkg"
@@ -17,10 +19,12 @@ import (
 
 var (
 	randomPort *bool
+	bootstraps *string
 )
 
 func main() {
 	randomPort = flag.Bool("rport", false, "choose random port")
+	bootstraps = flag.String("bootstraps", "", "choose custom bootstrap nodes (space-separated ip:port list)")
 
 	flag.Parse()
 
@@ -34,8 +38,9 @@ func main() {
 		}
 		conf.SelfPeer.Port = freePort
 	}
+	ParseBootstrapArg(bootstraps, conf)
 
-	content, err := ioutil.ReadFile("exampleConfig.yml")
+	content, err := ioutil.ReadFile("config/exampleConfig.yml")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -62,12 +67,12 @@ func main() {
 	p := babel.NewProtoManager(protoManagerConf)
 	p.RegisterListenAddr(&net.TCPAddr{IP: protoManagerConf.Peer.IP(), Port: int(protoManagerConf.Peer.ProtosPort())})
 	p.RegisterListenAddr(&net.UDPAddr{IP: protoManagerConf.Peer.IP(), Port: int(protoManagerConf.Peer.ProtosPort())})
-	p.RegisterProtocol(NewHyparviewProtocol(p, &conf))
+	p.RegisterProtocol(NewHyparviewProtocol(p, conf))
 	p.StartSync()
 }
 
-func readConfFile() HyparviewConfig {
-	configFileName := "exampleConfig.yml"
+func readConfFile() *HyparviewConfig {
+	configFileName := "config/exampleConfig.yml"
 	envVars := dry.EnvironMap()
 	customConfig, ok := envVars["config"]
 	if ok {
@@ -79,9 +84,9 @@ func readConfFile() HyparviewConfig {
 	}
 	defer f.Close()
 
-	var cfg HyparviewConfig
+	cfg := &HyparviewConfig{}
 	decoder := yaml.NewDecoder(f)
-	err = decoder.Decode(&cfg)
+	err = decoder.Decode(cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -98,4 +103,30 @@ func GetFreePort() (port int, err error) {
 		}
 	}
 	return
+}
+
+func ParseBootstrapArg(arg *string, conf *HyparviewConfig) {
+	if arg != nil && *arg != "" {
+		bootstrapPeers := []struct {
+			Port int    "yaml:\"port\""
+			Host string "yaml:\"host\""
+		}{}
+		fmt.Println("Setting custom bootstrap nodes")
+		for _, ipPortStr := range strings.Split(*arg, " ") {
+			split := strings.Split(ipPortStr, ":")
+			ip := split[0]
+			portInt, err := strconv.ParseInt(split[1], 10, 32)
+			if err != nil {
+				panic(err)
+			}
+			bootstrapPeers = append(bootstrapPeers, struct {
+				Port int    "yaml:\"port\""
+				Host string "yaml:\"host\""
+			}{
+				Port: int(portInt),
+				Host: ip,
+			})
+		}
+		conf.BootstrapPeers = bootstrapPeers
+	}
 }

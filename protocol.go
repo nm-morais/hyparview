@@ -56,6 +56,7 @@ type Hyparview struct {
 }
 
 func NewHyparviewProtocol(babel protocolManager.ProtocolManager, conf *HyparviewConfig) protocol.Protocol {
+	logger := logs.NewLogger(name)
 	selfIsBootstrap := false
 	bootstrapNodes := []peer.Peer{}
 	for _, p := range conf.BootstrapPeers {
@@ -66,12 +67,13 @@ func NewHyparviewProtocol(babel protocolManager.ProtocolManager, conf *Hyparview
 			break
 		}
 	}
+	logger.Infof("Starting with selfPeer:= %+v", babel.SelfPeer())
 
 	return &Hyparview{
 		babel:          babel,
 		lastShuffleMsg: nil,
 		timeStart:      time.Time{},
-		logger:         logs.NewLogger(name),
+		logger:         logger,
 		conf:           conf,
 
 		bootstrapNodes:  bootstrapNodes,
