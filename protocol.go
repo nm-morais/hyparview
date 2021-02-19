@@ -80,8 +80,16 @@ func NewHyparviewProtocol(babel protocolManager.ProtocolManager, conf *Hyparview
 		selfIsBootstrap: selfIsBootstrap,
 
 		HyparviewState: &HyparviewState{
-			activeView:  View{capacity: conf.ActiveViewSize, peers: make(map[string]*PeerState)},
-			passiveView: View{capacity: conf.PassiveViewSize, peers: make(map[string]*PeerState)},
+			activeView: View{
+				capacity: conf.ActiveViewSize,
+				asArr:    []*PeerState{},
+				asMap:    map[string]*PeerState{},
+			},
+			passiveView: View{
+				capacity: conf.PassiveViewSize,
+				asArr:    []*PeerState{},
+				asMap:    map[string]*PeerState{},
+			},
 		},
 	}
 }
@@ -174,12 +182,13 @@ func (h *Hyparview) DialSuccess(sourceProto protocol.ID, p peer.Peer) bool {
 	if sourceProto != h.ID() {
 		return false
 	}
-
-	if h.activeView.contains(p) {
-		h.activeView.peers[p.String()].outConnected = true
+	foundPeer, found := h.activeView.get(p)
+	if found {
+		foundPeer.outConnected = true
 		h.logger.Info("Dialed node in active view")
 		return true
 	}
+
 	h.logger.Warnf("Disconnecting connection from peer %+v because it is not in active view", p)
 	h.babel.SendMessageSideStream(DisconnectMessage{}, p, p.ToTCPAddr(), h.ID(), h.ID())
 	return false
@@ -214,7 +223,7 @@ func (h *Hyparview) HandleJoinMessage(sender peer.Peer, msg message.Message) {
 	}
 	h.addPeerToActiveView(sender)
 	h.sendMessageTmpTransport(ForwardJoinMessageReply{}, sender)
-	for _, neigh := range h.activeView.peers {
+	for _, neigh := range h.activeView.asArr {
 		if peer.PeersEqual(neigh, sender) {
 			continue
 		}
@@ -444,12 +453,12 @@ func (h *Hyparview) logHyparviewState() {
 	h.logger.Info("------------- Hyparview state -------------")
 	var toLog string
 	toLog = "Active view : "
-	for _, p := range h.activeView.peers {
+	for _, p := range h.activeView.asArr {
 		toLog += fmt.Sprintf("%s, ", p.String())
 	}
 	h.logger.Info(toLog)
 	toLog = "Passive view : "
-	for _, p := range h.passiveView.peers {
+	for _, p := range h.passiveView.asArr {
 		toLog += fmt.Sprintf("%s, ", p.String())
 	}
 	h.logger.Info(toLog)

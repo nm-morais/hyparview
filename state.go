@@ -9,30 +9,25 @@ import (
 
 type View struct {
 	capacity int
-	peers    map[string]*PeerState
+	asArr    []*PeerState
+	asMap    map[string]*PeerState
 }
 
 func (v View) size() int {
-	return len(v.peers)
+	return len(v.asArr)
 }
 
 func (v View) contains(p fmt.Stringer) bool {
-	_, ok := v.peers[p.String()]
+	_, ok := v.asMap[p.String()]
 	return ok
 }
 
 func (v View) dropRandom() *PeerState {
-	toDrop := getRandInt(len(v.peers))
-	i := 0
-	for k := range v.peers {
-		if i == toDrop {
-			tmp := v.peers[k]
-			delete(v.peers, k)
-			return tmp
-		}
-		i++
-	}
-	return nil
+	toDropIdx := getRandInt(len(v.asArr))
+	peerDropped := v.asArr[toDropIdx]
+	v.asArr = append(v.asArr[:toDropIdx], v.asArr[toDropIdx+1:]...)
+	delete(v.asMap, peerDropped.String())
+	return peerDropped
 }
 
 func (v View) add(p *PeerState, dropIfFull bool) {
@@ -44,30 +39,46 @@ func (v View) add(p *PeerState, dropIfFull bool) {
 		}
 	}
 
-	_, alreadyExists := v.peers[p.String()]
+	_, alreadyExists := v.asMap[p.String()]
 	if !alreadyExists {
-		v.peers[p.String()] = p
+		v.asMap[p.String()] = p
+		v.asArr = append([]*PeerState{p}, v.asArr...)
 	}
 }
 
-func (v View) remove(p fmt.Stringer) (existed bool) {
-	_, existed = v.peers[p.String()]
+func (v View) remove(p peer.Peer) (existed bool) {
+	_, existed = v.asMap[p.String()]
 	if existed {
-		delete(v.peers, p.String())
+		found := false
+		for idx, curr := range v.asArr {
+			if peer.PeersEqual(curr, p) {
+				v.asArr = append(v.asArr[:idx], v.asArr[idx+1:]...)
+				found = true
+				break
+			}
+		}
+		if !found {
+			panic("node was in keys but not in array")
+		}
+		delete(v.asMap, p.String())
 	}
 	return existed
 }
 
+func (v View) get(p fmt.Stringer) (*PeerState, bool) {
+	elem, exists := v.asMap[p.String()]
+	if !exists {
+		return nil, false
+	}
+	return elem, exists
+}
+
 func (v View) isFull() bool {
-	return len(v.peers) >= v.capacity
+	return len(v.asArr) >= v.capacity
 }
 
 func (v View) toArray() []*PeerState {
-	peerArr := make([]*PeerState, 0, len(v.peers))
-	for _, p := range v.peers {
-		peerArr = append(peerArr, p)
-	}
-	return peerArr
+	return v.asArr
 }
 
 func (v View) getRandomElementsFromView(amount int, exclusions ...peer.Peer) []peer.Peer {
