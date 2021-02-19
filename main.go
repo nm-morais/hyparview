@@ -40,6 +40,7 @@ func main() {
 		}
 		conf.SelfPeer.Port = freePort
 	}
+
 	ParseBootstrapArg(bootstraps, conf)
 	if listenIP != nil && *listenIP != "" {
 		conf.SelfPeer.Host = *listenIP
@@ -57,7 +58,9 @@ func main() {
 		panic(err)
 	}
 	conf.LogFolder += fmt.Sprintf("%s_%d/", conf.SelfPeer.Host, conf.SelfPeer.Port)
-
+	if listenIP != nil && *listenIP != "" {
+		conf.SelfPeer.Host = *listenIP
+	}
 	protoManagerConf := babel.Config{
 		Silent:    false,
 		LogFolder: conf.LogFolder,
