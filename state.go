@@ -73,6 +73,10 @@ func (v View) get(p fmt.Stringer) (*PeerState, bool) {
 	return elem, exists
 }
 
+func (v View) getIdx(i int) *PeerState {
+	return v.asArr[i]
+}
+
 func (v View) isFull() bool {
 	return len(v.asArr) >= v.capacity
 }
