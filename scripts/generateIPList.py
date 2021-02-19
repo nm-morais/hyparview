@@ -61,7 +61,7 @@ anchor_json = json.loads(output)
 entrypoints_ips.add(anchor_json["IPv4Address"].split("/")[0])
 
 print(f"entrypoints: {entrypoints_ips}")
-f = open("ips.txt", "w")
+f = open("config/ips.txt", "w")
 added = 0
 for i, ip in enumerate(reversed(ips)):
     if ip not in entrypoints_ips:
@@ -71,3 +71,5 @@ for i, ip in enumerate(reversed(ips)):
     if i == 1000:
         break
 f.close()
+
+print("Output file written to: config/ips.txt")
