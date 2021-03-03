@@ -21,14 +21,11 @@ COPY scripts/setupTc.sh /setupTc.sh
 COPY build/docker-entrypoint.sh /docker-entrypoint.sh
 COPY --from=builder /go/bin/hyparview /go/bin/hyparview
 
-# ARG LATENCY_MAP=config/inet100Latencies_x0.04.txt
-# ARG CONFIG_FILE=config/generated_config.txt
-
 ARG LATENCY_MAP
-ARG CONFIG_FILE
+ARG IPS_FILE
 
 COPY ${LATENCY_MAP} /latencyMap.txt
-COPY ${CONFIG_FILE} /config.txt
+COPY ${IPS_FILE} /config.txt
 RUN chmod +x /setupTc.sh /docker-entrypoint.sh /go/bin/hyparview
 
 ENTRYPOINT ["/docker-entrypoint.sh", "/latencyMap.txt", "/config.txt"]

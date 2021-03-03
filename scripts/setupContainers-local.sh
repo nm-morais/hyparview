@@ -12,8 +12,8 @@ if [ -z $DOCKER_IMAGE ]; then
   exit
 fi
 
-if [ -z $CONFIG_FILE ]; then
-  echo "Pls specify env var CONFIG_FILE"
+if [ -z $IPS_FILE ]; then
+  echo "Pls specify env var IPS_FILE"
   exit
 fi
 
@@ -30,7 +30,7 @@ fi
 
 echo "SWARM_NET: $SWARM_NET"
 echo "DOCKER_IMAGE: $DOCKER_IMAGE"
-echo "CONFIG_FILE: $CONFIG_FILE"
+echo "IPS_FILE: $IPS_FILE"
 
 echo "Building images..."
 
@@ -41,7 +41,7 @@ sleep 2s
 docker network create -d overlay --attachable --subnet $SWARM_SUBNET $SWARM_NET || true
 
 echo "Deploying with config file:"
-nContainers=$(wc -l $CONFIG_FILE)
+nContainers=$(wc -l $IPS_FILE)
 echo "Lauching containers..."
 i=0
 
@@ -50,4 +50,4 @@ do
   echo "Starting container with ip $ip and name: $name"
   docker run --net $SWARM_NET -v $SWARM_VOL:/tmp/logs -d -t --name "node$i" --ip $ip $DOCKER_IMAGE /go/bin/hyparview --bootstraps=10.10.255.254:1200 -listenIP=$ip > output.txt
   i=$((i+1))
-done < "$CONFIG_FILE"
+done < "$IPS_FILE"
