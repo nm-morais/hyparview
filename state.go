@@ -13,16 +13,16 @@ type View struct {
 	asMap    map[string]*PeerState
 }
 
-func (v View) size() int {
+func (v *View) size() int {
 	return len(v.asArr)
 }
 
-func (v View) contains(p fmt.Stringer) bool {
+func (v *View) contains(p fmt.Stringer) bool {
 	_, ok := v.asMap[p.String()]
 	return ok
 }
 
-func (v View) dropRandom() *PeerState {
+func (v *View) dropRandom() *PeerState {
 	toDropIdx := getRandInt(len(v.asArr))
 	peerDropped := v.asArr[toDropIdx]
 	v.asArr = append(v.asArr[:toDropIdx], v.asArr[toDropIdx+1:]...)
@@ -30,7 +30,7 @@ func (v View) dropRandom() *PeerState {
 	return peerDropped
 }
 
-func (v View) add(p *PeerState, dropIfFull bool) {
+func (v *View) add(p *PeerState, dropIfFull bool) {
 	if v.isFull() {
 		if dropIfFull {
 			v.dropRandom()
@@ -46,7 +46,7 @@ func (v View) add(p *PeerState, dropIfFull bool) {
 	}
 }
 
-func (v View) remove(p peer.Peer) (existed bool) {
+func (v *View) remove(p peer.Peer) (existed bool) {
 	_, existed = v.asMap[p.String()]
 	if existed {
 		found := false
@@ -65,7 +65,7 @@ func (v View) remove(p peer.Peer) (existed bool) {
 	return existed
 }
 
-func (v View) get(p fmt.Stringer) (*PeerState, bool) {
+func (v *View) get(p fmt.Stringer) (*PeerState, bool) {
 	elem, exists := v.asMap[p.String()]
 	if !exists {
 		return nil, false
@@ -73,19 +73,19 @@ func (v View) get(p fmt.Stringer) (*PeerState, bool) {
 	return elem, exists
 }
 
-func (v View) getIdx(i int) *PeerState {
+func (v *View) getIdx(i int) *PeerState {
 	return v.asArr[i]
 }
 
-func (v View) isFull() bool {
+func (v *View) isFull() bool {
 	return len(v.asArr) >= v.capacity
 }
 
-func (v View) toArray() []*PeerState {
+func (v *View) toArray() []*PeerState {
 	return v.asArr
 }
 
-func (v View) getRandomElementsFromView(amount int, exclusions ...peer.Peer) []peer.Peer {
+func (v *View) getRandomElementsFromView(amount int, exclusions ...peer.Peer) []peer.Peer {
 	viewAsArr := v.toArray()
 	perm := rand.Perm(len(viewAsArr))
 	rndElements := []peer.Peer{}
@@ -111,8 +111,8 @@ type PeerState struct {
 }
 
 type HyparviewState struct {
-	activeView  View
-	passiveView View
+	activeView  *View
+	passiveView *View
 }
 
 func (h *Hyparview) addPeerToActiveView(newPeer peer.Peer) bool {

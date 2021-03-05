@@ -42,6 +42,9 @@ echo "number of nodes: $n_nodes"
 nContainers=$(wc -l $IPS_FILE)
 i=0
 
+bootstrap_peer_full_line=$(head -n 1 $IPS_FILE)
+bootstrap_peer=$(echo "$bootstrap_peer_full_line" | cut -d' ' -f 1)
+
 echo "Lauching containers..."
 while read -r ip name
 do
@@ -51,14 +54,14 @@ do
   idx=$((idx+1))
   node=${!idx}
 
-  cmd="docker run -v $SWARM_VOL:/tmp/logs -d -t --cap-add=NET_ADMIN \
+  cmd="docker run -e config='/config/exampleConfig.yml' -v $SWARM_VOL:/tmp/logs -d -t --cap-add=NET_ADMIN \
    --net $SWARM_NET \
    --ip $ip \
    --name $name \
    -h $name \
-    $DOCKER_IMAGE $i $nContainers"
+    $DOCKER_IMAGE $i $nContainers -bootstraps=$bootstrap_peer -listenIP=$ip"
 
-  # echo "running command: '$cmd'"
+  echo "running command: $cmd"
 
   echo "Starting ${i}. Container $name with ip $ip and name $name on: $node"
   ssh -n $node "$cmd"

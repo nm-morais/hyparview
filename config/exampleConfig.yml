@@ -4,14 +4,15 @@ arwl: 3
 bootstrapPeers:
   - host: "0.0.0.0"
     port: 1200
-dialTimeoutMiliseconds: 3000
+dialTimeoutMiliseconds: 7000
 joinTimeSeconds: 5
 ka: 2
 kp: 3
-logFolder: logs/
+logFolder: /tmp/logs/
 minShuffleTimerDurationSeconds: 8
 passiveViewSize: 25
 pwrl: 6
+debugTimerDurationSeconds: 5
 self:
   host: "0.0.0.0"
   port: 1200

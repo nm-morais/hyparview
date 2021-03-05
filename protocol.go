@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
@@ -43,6 +44,7 @@ type HyparviewConfig struct {
 	Ka                             int    `yaml:"ka"`
 	Kp                             int    `yaml:"kp"`
 	MinShuffleTimerDurationSeconds int    `yaml:"minShuffleTimerDurationSeconds"`
+	DebugTimerDurationSeconds      int    `yaml:"debugTimerDurationSeconds"`
 }
 type Hyparview struct {
 	babel           protocolManager.ProtocolManager
@@ -80,12 +82,12 @@ func NewHyparviewProtocol(babel protocolManager.ProtocolManager, conf *Hyparview
 		selfIsBootstrap: selfIsBootstrap,
 
 		HyparviewState: &HyparviewState{
-			activeView: View{
+			activeView: &View{
 				capacity: conf.ActiveViewSize,
 				asArr:    []*PeerState{},
 				asMap:    map[string]*PeerState{},
 			},
-			passiveView: View{
+			passiveView: &View{
 				capacity: conf.PassiveViewSize,
 				asArr:    []*PeerState{},
 				asMap:    map[string]*PeerState{},
@@ -109,6 +111,7 @@ func (h *Hyparview) Logger() *logrus.Logger {
 func (h *Hyparview) Init() {
 	h.babel.RegisterTimerHandler(protoID, ShuffleTimerID, h.HandleShuffleTimer)
 	h.babel.RegisterTimerHandler(protoID, PromoteTimerID, h.HandlePromoteTimer)
+	h.babel.RegisterTimerHandler(protoID, DebugTimerID, h.HandleDebugTimer)
 
 	h.babel.RegisterMessageHandler(protoID, JoinMessage{}, h.HandleJoinMessage)
 	h.babel.RegisterMessageHandler(protoID, ForwardJoinMessage{}, h.HandleForwardJoinMessage)
@@ -124,6 +127,7 @@ func (h *Hyparview) Start() {
 	h.logger.Infof("Starting with confs: %+v", h.conf)
 	h.babel.RegisterTimer(h.ID(), ShuffleTimer{duration: 3 * time.Second})
 	h.babel.RegisterPeriodicTimer(h.ID(), PromoteTimer{duration: 7 * time.Second})
+	h.babel.RegisterPeriodicTimer(h.ID(), DebugTimer{time.Duration(h.conf.DebugTimerDurationSeconds) * time.Second})
 	h.joinOverlay()
 }
 
@@ -176,6 +180,28 @@ func (h *Hyparview) handleNodeDown(p peer.Peer) {
 			}, newNeighbor[0])
 		}
 	}
+}
+
+func (h *Hyparview) logInView() {
+	type viewWithLatencies []struct {
+		IP      string `json:"ip,omitempty"`
+		Latency int    `json:"latency,omitempty"`
+	}
+	toPrint := viewWithLatencies{}
+	for _, p := range h.activeView.asArr {
+		toPrint = append(toPrint, struct {
+			IP      string "json:\"ip,omitempty\""
+			Latency int    "json:\"latency,omitempty\""
+		}{
+			IP:      p.IP().String(),
+			Latency: int(0),
+		})
+	}
+	res, err := json.Marshal(toPrint)
+	if err != nil {
+		panic(err)
+	}
+	h.logger.Infof("<inView> %s", string(res))
 }
 
 func (h *Hyparview) DialSuccess(sourceProto protocol.ID, p peer.Peer) bool {
@@ -471,4 +497,8 @@ func (h *Hyparview) sendMessage(msg message.Message, target peer.Peer) {
 
 func (h *Hyparview) sendMessageTmpTransport(msg message.Message, target peer.Peer) {
 	h.babel.SendMessageSideStream(msg, target, target.ToTCPAddr(), h.ID(), h.ID())
+}
+
+func (h *Hyparview) HandleDebugTimer(t timer.Timer) {
+	h.logInView()
 }

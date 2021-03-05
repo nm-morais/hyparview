@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -27,7 +26,7 @@ func main() {
 	randomPort = flag.Bool("rport", false, "choose random port")
 	bootstraps = flag.String("bootstraps", "", "choose custom bootstrap nodes (space-separated ip:port list)")
 	listenIP = flag.String("listenIP", "", "choose custom ip to listen to")
-
+	fmt.Println("ARGS:", os.Args)
 	flag.Parse()
 
 	conf := readConfFile()
@@ -57,7 +56,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	conf.LogFolder += fmt.Sprintf("%s_%d/", conf.SelfPeer.Host, conf.SelfPeer.Port)
+	conf.LogFolder += fmt.Sprintf("%s:%d/", conf.SelfPeer.Host, conf.SelfPeer.Port)
 	if listenIP != nil && *listenIP != "" {
 		conf.SelfPeer.Host = *listenIP
 	}
@@ -120,19 +119,13 @@ func ParseBootstrapArg(arg *string, conf *HyparviewConfig) {
 			Host string "yaml:\"host\""
 		}{}
 		fmt.Println("Setting custom bootstrap nodes")
-		for _, ipPortStr := range strings.Split(*arg, " ") {
-			split := strings.Split(ipPortStr, ":")
-			ip := split[0]
-			portInt, err := strconv.ParseInt(split[1], 10, 32)
-			if err != nil {
-				panic(err)
-			}
+		for _, ipStr := range strings.Split(*arg, " ") {
 			bootstrapPeers = append(bootstrapPeers, struct {
 				Port int    "yaml:\"port\""
 				Host string "yaml:\"host\""
 			}{
-				Port: int(portInt),
-				Host: ip,
+				Port: int(conf.SelfPeer.Port),
+				Host: ipStr,
 			})
 		}
 		conf.BootstrapPeers = bootstrapPeers

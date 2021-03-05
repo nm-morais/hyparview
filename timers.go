@@ -33,3 +33,17 @@ func (PromoteTimer) ID() timer.ID {
 func (s PromoteTimer) Duration() time.Duration {
 	return s.duration
 }
+
+const DebugTimerID = 2003
+
+type DebugTimer struct {
+	duration time.Duration
+}
+
+func (DebugTimer) ID() timer.ID {
+	return DebugTimerID
+}
+
+func (s DebugTimer) Duration() time.Duration {
+	return s.duration
+}
