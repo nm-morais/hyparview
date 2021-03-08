@@ -22,10 +22,6 @@ if [ -z $LATENCY_MAP ]; then
   exit
 fi
 
-if [ -z $SWARM_VOL ]; then
-  echo "Pls specify env var SWARM_VOL"
-  exit
-fi
 
 
 echo "SWARM_NET: $SWARM_NET"
@@ -48,6 +44,6 @@ i=0
 while read -r ip name
 do
   echo "Starting container with ip $ip and name: $name"
-  docker run --net $SWARM_NET -v $SWARM_VOL:/tmp/logs -d -t --name "node$i" --ip $ip $DOCKER_IMAGE /go/bin/hyparview --bootstraps=10.10.255.254:1200 -listenIP=$ip > output.txt
+  docker run --net $SWARM_NET -v $SWARM_VOL_DIR:/tmp/logs -d -t --name "node$i" --ip $ip $DOCKER_IMAGE /go/bin/hyparview --bootstraps=10.10.255.254:1200 -listenIP=$ip > output.txt
   i=$((i+1))
 done < "$IPS_FILE"

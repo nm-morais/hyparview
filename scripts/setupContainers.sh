@@ -22,6 +22,11 @@ if [ -z $LATENCY_MAP ]; then
   exit
 fi
 
+if [ -z $SWARM_VOL_DIR ]; then
+  echo "Pls specify env var SWARM_VOL_DIR"
+  exit
+fi
+
 echo "SWARM_NET: $SWARM_NET"
 echo "DOCKER_IMAGE: $DOCKER_IMAGE"
 echo "IPS_FILE: $IPS_FILE"
@@ -54,7 +59,7 @@ do
   idx=$((idx+1))
   node=${!idx}
 
-  cmd="docker run -e config='/config/exampleConfig.yml' -v $SWARM_VOL:/tmp/logs -d -t --cap-add=NET_ADMIN \
+  cmd="docker run -e config='/config/exampleConfig.yml' -v $SWARM_VOL_DIR:/tmp/logs -d -t --cap-add=NET_ADMIN \
    --net $SWARM_NET \
    --ip $ip \
    --name $name \

@@ -9,7 +9,7 @@ from dateutil.parser import parse
 import numpy as np
 import os
 import argparse
-import statistics
+import datetime
 
 latency_collection_tag = "<latency_collection>"
 inview_tag = "<inView>"
@@ -399,6 +399,14 @@ def main():
     #               output_path=args.output_path)
     # plotConfigMapAndConnections(node_positions, node_ids, parent_edges,
     #                             landmarks, latencies, args.output_path)
+    df.to_csv(f"{args.output_path}stats.csv")
+    with open(f'{args.output_path}node_infos.json', 'w') as outfile:
+        json.dump(node_infos.copy(), outfile, default=myconverter)
+
+
+def myconverter(o):
+    if isinstance(o, datetime.datetime):
+        return o.__str__()
 
 
 if __name__ == "__main__":
