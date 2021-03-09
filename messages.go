@@ -213,7 +213,7 @@ func (ShuffleReplyMessage) Deserializer() message.Deserializer {
 	return defaultShuffleReplyMessageSerializer
 }
 func (ShuffleReplyMessageSerializer) Serialize(msg message.Message) []byte {
-	msgBytes := make([]byte, 8)
+	msgBytes := make([]byte, 4)
 	shuffleMsg := msg.(ShuffleReplyMessage)
 	binary.BigEndian.PutUint32(msgBytes[0:4], shuffleMsg.ID)
 	return append(msgBytes, peer.SerializePeerArray(shuffleMsg.Peers)...)

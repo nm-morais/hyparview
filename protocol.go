@@ -369,10 +369,9 @@ func (h *Hyparview) HandleShuffleMessage(sender peer.Peer, msg message.Message) 
 			return
 		}
 	}
-
 	//  TTL is 0 or have no nodes to forward to
 	//  select random nr of hosts from passive view
-	exclusions := append(shuffleMsg.Peers, h.babel.SelfPeer(), sender)
+	exclusions := append(shuffleMsg.Peers, sender)
 	toSend := h.passiveView.getRandomElementsFromView(len(shuffleMsg.Peers), exclusions...)
 	h.mergeShuffleMsgPeersWithPassiveView(shuffleMsg.Peers, toSend)
 	reply := ShuffleReplyMessage{
@@ -451,8 +450,9 @@ func (h *Hyparview) HandleShuffleTimer(t timer.Timer) {
 		return
 	}
 
-	passiveViewRandomPeers := h.passiveView.getRandomElementsFromView(h.conf.Kp - 1)
-	activeViewRandomPeers := h.activeView.getRandomElementsFromView(h.conf.Ka)
+	rndNode := h.activeView.getRandomElementsFromView(1)
+	passiveViewRandomPeers := h.passiveView.getRandomElementsFromView(h.conf.Kp-1, rndNode...)
+	activeViewRandomPeers := h.activeView.getRandomElementsFromView(h.conf.Ka, rndNode...)
 	peers := append(passiveViewRandomPeers, activeViewRandomPeers...)
 	peers = append(peers, h.babel.SelfPeer())
 	toSend := ShuffleMessage{
@@ -461,7 +461,6 @@ func (h *Hyparview) HandleShuffleTimer(t timer.Timer) {
 		Peers: peers,
 	}
 	h.lastShuffleMsg = &toSend
-	rndNode := h.activeView.getRandomElementsFromView(1)
 	h.logger.Info("Sending shuffle message to: ", rndNode[0].String())
 	h.sendMessage(toSend, rndNode[0])
 }
