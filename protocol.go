@@ -126,8 +126,8 @@ func (h *Hyparview) Init() {
 func (h *Hyparview) Start() {
 	h.logger.Infof("Starting with confs: %+v", h.conf)
 	h.babel.RegisterTimer(h.ID(), ShuffleTimer{duration: 3 * time.Second})
-	h.babel.RegisterPeriodicTimer(h.ID(), PromoteTimer{duration: 7 * time.Second})
-	h.babel.RegisterPeriodicTimer(h.ID(), DebugTimer{time.Duration(h.conf.DebugTimerDurationSeconds) * time.Second})
+	h.babel.RegisterPeriodicTimer(h.ID(), PromoteTimer{duration: 7 * time.Second}, true)
+	h.babel.RegisterPeriodicTimer(h.ID(), DebugTimer{time.Duration(h.conf.DebugTimerDurationSeconds) * time.Second}, true)
 	h.joinOverlay()
 }
 
