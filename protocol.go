@@ -132,16 +132,18 @@ func (h *Hyparview) Start() {
 }
 
 func (h *Hyparview) joinOverlay() {
-	if h.selfIsBootstrap {
-		return
-	}
-	toSend := JoinMessage{}
-	h.logger.Info("Joining overlay...")
 	if len(h.bootstrapNodes) == 0 {
 		h.logger.Panic("No nodes to join overlay...")
 	}
-	bootstrapNode := h.bootstrapNodes[getRandInt(len(h.bootstrapNodes))]
-	h.babel.SendMessageSideStream(toSend, bootstrapNode, bootstrapNode.ToTCPAddr(), protoID, protoID)
+	for _, b := range h.bootstrapNodes {
+		if peer.PeersEqual(b, h.babel.SelfPeer()) {
+			continue
+		}
+		toSend := JoinMessage{}
+		h.logger.Info("Joining overlay...")
+		h.babel.SendMessageSideStream(toSend, b, b.ToTCPAddr(), protoID, protoID)
+		return
+	}
 }
 
 func (h *Hyparview) InConnRequested(dialerProto protocol.ID, p peer.Peer) bool {
