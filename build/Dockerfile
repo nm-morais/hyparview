@@ -9,7 +9,7 @@ RUN GOOS=linux GOARCH=amd64 go build -o /go/bin/hyparview *.go
 FROM debian:stable-slim as hyparview
 
 # RUN apk add iproute2-tc
-RUN apt update 2>/dev/null | grep -P "\d\K upgraded" ; apt install iproute2 -y 2>/dev/null
+RUN apt update 2>/dev/null | grep -P "\d\K upgraded" ; apt install iproute2 -y 2>/dev/null; apt install kmod -y 2>/dev/null
 
 COPY scripts/setupTc.sh /setupTc.sh
 COPY build/docker-entrypoint.sh /docker-entrypoint.sh
