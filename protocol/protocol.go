@@ -1,4 +1,4 @@
-package main
+package protocol
 
 import (
 	"encoding/json"
@@ -26,12 +26,14 @@ const (
 
 type HyparviewConfig struct {
 	SelfPeer struct {
-		Port int    `yaml:"port"`
-		Host string `yaml:"host"`
+		Port          int    `yaml:"port"`
+		Host          string `yaml:"host"`
+		AnalyticsPort int    `yaml:"analyticsPort"`
 	} `yaml:"self"`
 	BootstrapPeers []struct {
-		Port int    `yaml:"port"`
-		Host string `yaml:"host"`
+		Port          int    `yaml:"port"`
+		Host          string `yaml:"host"`
+		AnalyticsPort int    `yaml:"analyticsPort"`
 	} `yaml:"bootstrapPeers"`
 
 	DialTimeoutMiliseconds         int    `yaml:"dialTimeoutMiliseconds"`
