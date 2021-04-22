@@ -3,8 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"strings"
@@ -12,24 +10,25 @@ import (
 
 	babel "github.com/nm-morais/go-babel/pkg"
 	"github.com/nm-morais/go-babel/pkg/peer"
-	"github.com/ungerik/go-dry"
 	"gopkg.in/yaml.v2"
 )
 
 var (
-	randomPort *bool
-	bootstraps *string
-	listenIP   *string
+	randomPort   *bool
+	bootstraps   *string
+	listenIP     *string
+	confFilePath *string
 )
 
 func main() {
 	randomPort = flag.Bool("rport", false, "choose random port")
 	bootstraps = flag.String("bootstraps", "", "choose custom bootstrap nodes (space-separated ip:port list)")
 	listenIP = flag.String("listenIP", "", "choose custom ip to listen to")
+	confFilePath = flag.String("conf", "config/exampleConfig.yml", "specify conf file path")
 	fmt.Println("ARGS:", os.Args)
 	flag.Parse()
-
-	conf := readConfFile()
+	fmt.Println(*confFilePath)
+	conf := readConfFile(*confFilePath)
 
 	if *randomPort {
 		fmt.Println("Setting custom port")
@@ -45,17 +44,6 @@ func main() {
 		conf.SelfPeer.Host = *listenIP
 	}
 
-	content, err := ioutil.ReadFile("config/exampleConfig.yml")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Convert []byte to string and print to screen
-	text := string(content)
-	fmt.Println(text)
-	if err != nil {
-		panic(err)
-	}
 	conf.LogFolder += fmt.Sprintf("%s:%d/", conf.SelfPeer.Host, conf.SelfPeer.Port)
 	if listenIP != nil && *listenIP != "" {
 		conf.SelfPeer.Host = *listenIP
@@ -78,14 +66,8 @@ func main() {
 	p.StartSync()
 }
 
-func readConfFile() *HyparviewConfig {
-	configFileName := "config/exampleConfig.yml"
-	envVars := dry.EnvironMap()
-	customConfig, ok := envVars["config"]
-	if ok {
-		configFileName = customConfig
-	}
-	f, err := os.Open(configFileName)
+func readConfFile(path string) *HyparviewConfig {
+	f, err := os.Open(path)
 	if err != nil {
 		panic(err)
 	}

@@ -181,6 +181,7 @@ func (h *Hyparview) handleNodeDown(p peer.Peer) {
 				HighPrio: h.activeView.size() <= 1, // TODO review this
 			}, newNeighbor[0])
 		}
+		h.babel.SendNotification(NeighborDownNotification{PeerDown: p})
 	}
 }
 
@@ -214,11 +215,13 @@ func (h *Hyparview) DialSuccess(sourceProto protocol.ID, p peer.Peer) bool {
 	if found {
 		foundPeer.outConnected = true
 		h.logger.Info("Dialed node in active view")
+		h.babel.SendNotification(NeighborUpNotification{PeerUp: foundPeer})
 		return true
 	}
 
 	h.logger.Warnf("Disconnecting connection from peer %+v because it is not in active view", p)
 	h.babel.SendMessageSideStream(DisconnectMessage{}, p, p.ToTCPAddr(), h.ID(), h.ID())
+	h.babel.SendNotification(NeighborDownNotification{PeerDown: p})
 	return false
 }
 
@@ -470,6 +473,7 @@ func (h *Hyparview) HandleShuffleTimer(t timer.Timer) {
 func (h *Hyparview) HandleDisconnectMessage(sender peer.Peer, m message.Message) {
 	h.logger.Warn("Got Disconnect message")
 	iPeer := sender
+	h.babel.SendNotification(NeighborDownNotification{PeerDown: iPeer})
 	h.activeView.remove(iPeer)
 	h.addPeerToPassiveView(iPeer)
 }
