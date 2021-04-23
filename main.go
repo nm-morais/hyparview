@@ -10,6 +10,7 @@ import (
 
 	babel "github.com/nm-morais/go-babel/pkg"
 	"github.com/nm-morais/go-babel/pkg/peer"
+	"github.com/nm-morais/x-bot/protocol"
 	"gopkg.in/yaml.v2"
 )
 
@@ -62,18 +63,18 @@ func main() {
 	p := babel.NewProtoManager(protoManagerConf)
 	p.RegisterListenAddr(&net.TCPAddr{IP: protoManagerConf.Peer.IP(), Port: int(protoManagerConf.Peer.ProtosPort())})
 	p.RegisterListenAddr(&net.UDPAddr{IP: protoManagerConf.Peer.IP(), Port: int(protoManagerConf.Peer.ProtosPort())})
-	p.RegisterProtocol(NewHyparviewProtocol(p, conf))
+	p.RegisterProtocol(protocol.NewHyparviewProtocol(p, conf))
 	p.StartSync()
 }
 
-func readConfFile(path string) *HyparviewConfig {
+func readConfFile(path string) *protocol.HyparviewConfig {
 	f, err := os.Open(path)
 	if err != nil {
 		panic(err)
 	}
 	defer f.Close()
 
-	cfg := &HyparviewConfig{}
+	cfg := &protocol.HyparviewConfig{}
 	decoder := yaml.NewDecoder(f)
 	err = decoder.Decode(cfg)
 	if err != nil {
@@ -94,17 +95,19 @@ func GetFreePort() (port int, err error) {
 	return
 }
 
-func ParseBootstrapArg(arg *string, conf *HyparviewConfig) {
+func ParseBootstrapArg(arg *string, conf *protocol.HyparviewConfig) {
 	if arg != nil && *arg != "" {
 		bootstrapPeers := []struct {
-			Port int    "yaml:\"port\""
-			Host string "yaml:\"host\""
+			Port          int    `yaml:"port"`
+			Host          string `yaml:"host"`
+			AnalyticsPort int    `yaml:"analyticsPort"`
 		}{}
 		fmt.Println("Setting custom bootstrap nodes")
 		for _, ipStr := range strings.Split(*arg, " ") {
 			bootstrapPeers = append(bootstrapPeers, struct {
-				Port int    "yaml:\"port\""
-				Host string "yaml:\"host\""
+				Port          int    `yaml:"port"`
+				Host          string `yaml:"host"`
+				AnalyticsPort int    `yaml:"analyticsPort"`
 			}{
 				Port: int(conf.SelfPeer.Port),
 				Host: ipStr,

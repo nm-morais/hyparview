@@ -26,9 +26,9 @@ const (
 
 type HyparviewConfig struct {
 	SelfPeer struct {
+		AnalyticsPort int    `yaml:"analyticsPort"`
 		Port          int    `yaml:"port"`
 		Host          string `yaml:"host"`
-		AnalyticsPort int    `yaml:"analyticsPort"`
 	} `yaml:"self"`
 	BootstrapPeers []struct {
 		Port          int    `yaml:"port"`
@@ -64,7 +64,7 @@ func NewHyparviewProtocol(babel protocolManager.ProtocolManager, conf *Hyparview
 	selfIsBootstrap := false
 	bootstrapNodes := []peer.Peer{}
 	for _, p := range conf.BootstrapPeers {
-		boostrapNode := peer.NewPeer(net.ParseIP(p.Host), uint16(p.Port), 0)
+		boostrapNode := peer.NewPeer(net.ParseIP(p.Host), uint16(p.Port), uint16(p.AnalyticsPort))
 		bootstrapNodes = append(bootstrapNodes, boostrapNode)
 		if peer.PeersEqual(babel.SelfPeer(), boostrapNode) {
 			selfIsBootstrap = true
@@ -72,7 +72,12 @@ func NewHyparviewProtocol(babel protocolManager.ProtocolManager, conf *Hyparview
 		}
 	}
 	logger.Infof("Starting with selfPeer:= %+v", babel.SelfPeer())
-
+	logger.Infof("%+v", babel.SelfPeer().AnalyticsPort())
+	for _, b := range bootstrapNodes {
+		logger.Infof("%+v", b.AnalyticsPort())
+	}
+	logger.Infof("Starting with bootstraps:= %+v", bootstrapNodes)
+	logger.Infof("Starting with selfIsBootstrap:= %+v", selfIsBootstrap)
 	return &Hyparview{
 		babel:          babel,
 		lastShuffleMsg: nil,
