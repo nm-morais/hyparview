@@ -479,10 +479,11 @@ func (h *Hyparview) HandleShuffleTimer(t timer.Timer) {
 
 func (h *Hyparview) HandleDisconnectMessage(sender peer.Peer, m message.Message) {
 	h.logger.Warn("Got Disconnect message")
-	iPeer := sender
-	h.babel.SendNotification(NeighborDownNotification{PeerDown: iPeer})
-	h.activeView.remove(iPeer)
-	h.addPeerToPassiveView(iPeer)
+	// iPeer := sender
+	// h.babel.SendNotification(NeighborDownNotification{PeerDown: iPeer})
+	// h.activeView.remove(iPeer)
+	// h.addPeerToPassiveView(iPeer)
+	h.handleNodeDown(sender)
 }
 
 // ---------------- Auxiliary functions ----------------
