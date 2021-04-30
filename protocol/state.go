@@ -46,8 +46,8 @@ func (v *View) add(p *PeerState, dropIfFull bool) {
 	}
 }
 
-func (v *View) remove(p peer.Peer) (existed bool) {
-	_, existed = v.asMap[p.String()]
+func (v *View) remove(p peer.Peer) *PeerState {
+	removed, existed := v.asMap[p.String()]
 	if existed {
 		found := false
 		for idx, curr := range v.asArr {
@@ -62,7 +62,7 @@ func (v *View) remove(p peer.Peer) (existed bool) {
 		}
 		delete(v.asMap, p.String())
 	}
-	return existed
+	return removed
 }
 
 func (v *View) get(p fmt.Stringer) (*PeerState, bool) {
@@ -163,7 +163,15 @@ func (h *Hyparview) dropRandomElemFromActiveView() {
 	if removed != nil {
 		h.addPeerToPassiveView(removed)
 		disconnectMsg := DisconnectMessage{}
-		h.babel.SendMessageAndDisconnect(disconnectMsg, removed, h.ID(), h.ID())
+		if removed.outConnected {
+			h.babel.SendMessageAndDisconnect(disconnectMsg, removed, h.ID(), h.ID())
+			h.babel.SendNotification(NeighborDownNotification{
+				PeerDown: removed,
+				View:     h.getView(),
+			})
+		} else {
+			h.babel.SendMessageSideStream(disconnectMsg, removed, removed.ToTCPAddr(), h.ID(), h.ID())
+		}
 		h.logHyparviewState()
 	}
 }

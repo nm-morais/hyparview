@@ -109,7 +109,7 @@ func ParseBootstrapArg(arg *string, conf *protocol.HyparviewConfig) {
 				Host          string `yaml:"host"`
 				AnalyticsPort int    `yaml:"analyticsPort"`
 			}{
-				Port: int(conf.SelfPeer.Port),
+				Port: conf.SelfPeer.Port,
 				Host: ipStr,
 			})
 		}
