@@ -346,7 +346,7 @@ func (h *Hyparview) HandleForwardJoinMessage(sender peer.Peer, msg message.Messa
 }
 
 func (h *Hyparview) HandleForwardJoinMessageReply(sender peer.Peer, msg message.Message) {
-	h.logger.Infof("Received forward join from message %s", sender.String())
+	h.logger.Infof("Received forward join message reply from  %s", sender.String())
 	h.addPeerToActiveView(sender)
 }
 
