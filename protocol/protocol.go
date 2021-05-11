@@ -136,9 +136,15 @@ func (h *Hyparview) Start() {
 	h.babel.RegisterPeriodicTimer(h.ID(), PromoteTimer{duration: 7 * time.Second}, true)
 	h.babel.RegisterPeriodicTimer(h.ID(), DebugTimer{time.Duration(h.conf.DebugTimerDurationSeconds) * time.Second}, true)
 	h.joinOverlay()
+	h.timeStart = time.Now()
 }
 
 func (h *Hyparview) joinOverlay() {
+	if time.Since(h.timeStart) < time.Duration(h.conf.JoinTimeSeconds)*time.Second {
+		h.logger.Infof("Not rejoining since not enough time has passed: %+v", h.conf.JoinTimeSeconds)
+		return
+	}
+
 	if len(h.bootstrapNodes) == 0 {
 		h.logger.Panic("No nodes to join overlay...")
 	}
@@ -243,7 +249,8 @@ func (h *Hyparview) DialSuccess(sourceProto protocol.ID, p peer.Peer) bool {
 	}
 
 	h.logger.Warnf("Disconnecting connection from peer %+v because it is not in active view", p)
-	h.babel.SendMessageAndDisconnect(DisconnectMessage{}, p, h.ID(), h.ID())
+	// h.babel.SendMessageAndDisconnect(DisconnectMessage{}, p, h.ID(), h.ID())
+	h.babel.Disconnect(h.ID(), p)
 	return false
 }
 
