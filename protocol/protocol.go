@@ -49,13 +49,14 @@ type HyparviewConfig struct {
 	DebugTimerDurationSeconds      int    `yaml:"debugTimerDurationSeconds"`
 }
 type Hyparview struct {
-	babel           protocolManager.ProtocolManager
-	lastShuffleMsg  *ShuffleMessage
-	timeStart       time.Time
-	logger          *logrus.Logger
-	conf            *HyparviewConfig
-	selfIsBootstrap bool
-	bootstrapNodes  []peer.Peer
+	babel                 protocolManager.ProtocolManager
+	lastShuffleMsg        *ShuffleMessage
+	timeStart             time.Time
+	logger                *logrus.Logger
+	conf                  *HyparviewConfig
+	selfIsBootstrap       bool
+	bootstrapNodes        []peer.Peer
+	danglingNeighCounters map[string]int
 	*HyparviewState
 }
 
@@ -85,9 +86,9 @@ func NewHyparviewProtocol(babel protocolManager.ProtocolManager, conf *Hyparview
 		logger:         logger,
 		conf:           conf,
 
-		bootstrapNodes:  bootstrapNodes,
-		selfIsBootstrap: selfIsBootstrap,
-
+		bootstrapNodes:        bootstrapNodes,
+		selfIsBootstrap:       selfIsBootstrap,
+		danglingNeighCounters: make(map[string]int),
 		HyparviewState: &HyparviewState{
 			activeView: &View{
 				capacity: conf.ActiveViewSize,
@@ -119,6 +120,7 @@ func (h *Hyparview) Init() {
 	h.babel.RegisterTimerHandler(protoID, ShuffleTimerID, h.HandleShuffleTimer)
 	h.babel.RegisterTimerHandler(protoID, PromoteTimerID, h.HandlePromoteTimer)
 	h.babel.RegisterTimerHandler(protoID, DebugTimerID, h.HandleDebugTimer)
+	h.babel.RegisterTimerHandler(protoID, MaintenanceTimerID, h.HandleMaintenanceTimer)
 
 	h.babel.RegisterMessageHandler(protoID, JoinMessage{}, h.HandleJoinMessage)
 	h.babel.RegisterMessageHandler(protoID, ForwardJoinMessage{}, h.HandleForwardJoinMessage)
@@ -126,8 +128,10 @@ func (h *Hyparview) Init() {
 	h.babel.RegisterMessageHandler(protoID, ShuffleMessage{}, h.HandleShuffleMessage)
 	h.babel.RegisterMessageHandler(protoID, ShuffleReplyMessage{}, h.HandleShuffleReplyMessage)
 	h.babel.RegisterMessageHandler(protoID, NeighbourMessage{}, h.HandleNeighbourMessage)
+	h.babel.RegisterMessageHandler(protoID, NeighbourMaintenanceMessage{}, h.HandleNeighbourMaintenanceMessage)
 	h.babel.RegisterMessageHandler(protoID, NeighbourMessageReply{}, h.HandleNeighbourReplyMessage)
 	h.babel.RegisterMessageHandler(protoID, DisconnectMessage{}, h.HandleDisconnectMessage)
+
 }
 
 func (h *Hyparview) Start() {
@@ -135,6 +139,7 @@ func (h *Hyparview) Start() {
 	h.babel.RegisterTimer(h.ID(), ShuffleTimer{duration: 3 * time.Second})
 	h.babel.RegisterPeriodicTimer(h.ID(), PromoteTimer{duration: 7 * time.Second}, true)
 	h.babel.RegisterPeriodicTimer(h.ID(), DebugTimer{time.Duration(h.conf.DebugTimerDurationSeconds) * time.Second}, true)
+	h.babel.RegisterPeriodicTimer(h.ID(), MaintenanceTimer{3 * time.Second}, true)
 	h.joinOverlay()
 	h.timeStart = time.Now()
 }
@@ -249,7 +254,6 @@ func (h *Hyparview) DialSuccess(sourceProto protocol.ID, p peer.Peer) bool {
 	}
 
 	h.logger.Warnf("Disconnecting connection from peer %+v because it is not in active view", p)
-	// h.babel.SendMessageAndDisconnect(DisconnectMessage{}, p, h.ID(), h.ID())
 	h.babel.Disconnect(h.ID(), p)
 	return false
 }
@@ -386,6 +390,23 @@ func (h *Hyparview) HandleNeighbourMessage(sender peer.Peer, msg message.Message
 	}
 }
 
+func (h *Hyparview) HandleNeighbourMaintenanceMessage(sender peer.Peer, msg message.Message) {
+	if h.activeView.contains(sender) {
+		delete(h.danglingNeighCounters, sender.String())
+		return
+	}
+	h.logger.Warn("Got maintenance message from not a neigh")
+	_, ok := h.danglingNeighCounters[sender.String()]
+	if !ok {
+		h.danglingNeighCounters[sender.String()] = 0
+	}
+	h.danglingNeighCounters[sender.String()]++
+	if h.danglingNeighCounters[sender.String()] >= 3 {
+		h.babel.SendMessageSideStream(DisconnectMessage{}, sender, sender.ToTCPAddr(), h.ID(), h.ID())
+		h.logger.Warn("Disconnecting due to maintenance msg")
+	}
+}
+
 func (h *Hyparview) HandleNeighbourReplyMessage(sender peer.Peer, msg message.Message) {
 	h.logger.Info("Received neighbor reply message")
 	neighborReplyMsg := msg.(NeighbourMessageReply)
@@ -474,6 +495,15 @@ func (h *Hyparview) HandlePromoteTimer(t timer.Timer) {
 				HighPrio: h.activeView.size() <= 1, // TODO review this
 			}, newNeighbor[0])
 		}
+	}
+}
+
+func (h *Hyparview) HandleMaintenanceTimer(t timer.Timer) {
+	for _, p := range h.activeView.asArr {
+		if !p.outConnected {
+			h.babel.Dial(h.ID(), p, p.ToTCPAddr())
+		}
+		h.sendMessage(NeighbourMaintenanceMessage{}, p)
 	}
 }
 

@@ -158,7 +158,30 @@ func (neighbourMessageReplySerializer) Deserialize(msgBytes []byte) message.Mess
 	}
 }
 
-const ShuffleMessageType = 2006
+const NeighbourMaintenanceMessageType = 2006
+
+type NeighbourMaintenanceMessage struct {
+}
+type neighbourMaintenanceMessageSerializer struct{}
+
+var defaultNeighbourMaintenanceMessageSerializer = neighbourMaintenanceMessageSerializer{}
+
+func (NeighbourMaintenanceMessage) Type() message.ID { return NeighbourMaintenanceMessageType }
+func (NeighbourMaintenanceMessage) Serializer() message.Serializer {
+	return defaultNeighbourMaintenanceMessageSerializer
+}
+func (NeighbourMaintenanceMessage) Deserializer() message.Deserializer {
+	return defaultNeighbourMaintenanceMessageSerializer
+}
+func (neighbourMaintenanceMessageSerializer) Serialize(msg message.Message) []byte {
+	return []byte{}
+}
+
+func (neighbourMaintenanceMessageSerializer) Deserialize(msgBytes []byte) message.Message {
+	return NeighbourMaintenanceMessage{}
+}
+
+const ShuffleMessageType = 2007
 
 type ShuffleMessage struct {
 	ID    uint32
@@ -195,7 +218,7 @@ func (ShuffleMessageSerializer) Deserialize(msgBytes []byte) message.Message {
 	}
 }
 
-const ShuffleReplyMessageType = 2007
+const ShuffleReplyMessageType = 2008
 
 type ShuffleReplyMessage struct {
 	ID    uint32
