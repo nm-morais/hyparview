@@ -131,7 +131,6 @@ func (h *Hyparview) Init() {
 	h.babel.RegisterMessageHandler(protoID, NeighbourMaintenanceMessage{}, h.HandleNeighbourMaintenanceMessage)
 	h.babel.RegisterMessageHandler(protoID, NeighbourMessageReply{}, h.HandleNeighbourReplyMessage)
 	h.babel.RegisterMessageHandler(protoID, DisconnectMessage{}, h.HandleDisconnectMessage)
-
 }
 
 func (h *Hyparview) Start() {
@@ -139,7 +138,7 @@ func (h *Hyparview) Start() {
 	h.babel.RegisterTimer(h.ID(), ShuffleTimer{duration: 3 * time.Second})
 	h.babel.RegisterPeriodicTimer(h.ID(), PromoteTimer{duration: 7 * time.Second}, true)
 	h.babel.RegisterPeriodicTimer(h.ID(), DebugTimer{time.Duration(h.conf.DebugTimerDurationSeconds) * time.Second}, true)
-	h.babel.RegisterPeriodicTimer(h.ID(), MaintenanceTimer{3 * time.Second}, true)
+	h.babel.RegisterPeriodicTimer(h.ID(), MaintenanceTimer{1 * time.Second}, false)
 	h.joinOverlay()
 	h.timeStart = time.Now()
 }
@@ -391,9 +390,14 @@ func (h *Hyparview) HandleNeighbourMessage(sender peer.Peer, msg message.Message
 }
 
 func (h *Hyparview) HandleNeighbourMaintenanceMessage(sender peer.Peer, msg message.Message) {
-	if h.activeView.contains(sender) {
-		delete(h.danglingNeighCounters, sender.String())
-		return
+	if p, ok := h.activeView.get(sender); ok {
+		if p.outConnected {
+			delete(h.danglingNeighCounters, sender.String())
+			return
+		} else {
+			h.babel.Dial(h.ID(), sender, sender.ToTCPAddr())
+			return
+		}
 	}
 	h.logger.Warn("Got maintenance message from not a neigh")
 	_, ok := h.danglingNeighCounters[sender.String()]

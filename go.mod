@@ -1,6 +1,6 @@
 module github.com/nm-morais/x-bot
 
-go 1.15
+go 1.16
 
 require (
 	github.com/nm-morais/go-babel v1.0.1
