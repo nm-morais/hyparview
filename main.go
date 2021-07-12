@@ -53,7 +53,7 @@ func main() {
 		Silent:    false,
 		LogFolder: conf.LogFolder,
 		SmConf: babel.StreamManagerConf{
-			BatchMaxSizeBytes: 2000,
+			BatchMaxSizeBytes: 20000,
 			BatchTimeout:      time.Second,
 			DialTimeout:       time.Millisecond * time.Duration(conf.DialTimeoutMiliseconds),
 		},

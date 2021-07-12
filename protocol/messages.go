@@ -7,7 +7,7 @@ import (
 	"github.com/nm-morais/go-babel/pkg/peer"
 )
 
-const JoinMessageType = 2000
+const JoinMessageType = 1500
 
 type JoinMessage struct{}
 type joinMessageSerializer struct{}
@@ -20,7 +20,7 @@ func (JoinMessage) Deserializer() message.Deserializer                    { retu
 func (joinMessageSerializer) Serialize(msg message.Message) []byte        { return []byte{} }
 func (joinMessageSerializer) Deserialize(msgBytes []byte) message.Message { return JoinMessage{} }
 
-const DisconnectMessageType = 2001
+const DisconnectMessageType = 1501
 
 type DisconnectMessage struct{}
 type disconnectMessageSerializer struct{}
@@ -37,7 +37,7 @@ func (disconnectMessageSerializer) Deserialize(msgBytes []byte) message.Message 
 	return DisconnectMessage{}
 }
 
-const ForwardJoinMessageType = 2002
+const ForwardJoinMessageType = 1502
 
 type ForwardJoinMessage struct {
 	TTL            uint32
@@ -69,7 +69,7 @@ func (forwardJoinMessageSerializer) Deserialize(msgBytes []byte) message.Message
 	}
 }
 
-const ForwardJoinMessageReplyType = 2003
+const ForwardJoinMessageReplyType = 1503
 
 type ForwardJoinMessageReply struct {
 }
@@ -92,7 +92,7 @@ func (forwardJoinMessageReplySerializer) Deserialize(msgBytes []byte) message.Me
 	return ForwardJoinMessageReply{}
 }
 
-const NeighbourMessageType = 2004
+const NeighbourMessageType = 1504
 
 type NeighbourMessage struct {
 	HighPrio bool
@@ -124,7 +124,7 @@ func (neighbourMessageSerializer) Deserialize(msgBytes []byte) message.Message {
 	}
 }
 
-const NeighbourMessageReplyType = 2005
+const NeighbourMessageReplyType = 1505
 
 type NeighbourMessageReply struct {
 	Accepted bool
@@ -158,7 +158,7 @@ func (neighbourMessageReplySerializer) Deserialize(msgBytes []byte) message.Mess
 	}
 }
 
-const NeighbourMaintenanceMessageType = 2006
+const NeighbourMaintenanceMessageType = 1506
 
 type NeighbourMaintenanceMessage struct {
 }
@@ -181,7 +181,7 @@ func (neighbourMaintenanceMessageSerializer) Deserialize(msgBytes []byte) messag
 	return NeighbourMaintenanceMessage{}
 }
 
-const ShuffleMessageType = 2007
+const ShuffleMessageType = 1507
 
 type ShuffleMessage struct {
 	ID    uint32
@@ -218,7 +218,7 @@ func (ShuffleMessageSerializer) Deserialize(msgBytes []byte) message.Message {
 	}
 }
 
-const ShuffleReplyMessageType = 2008
+const ShuffleReplyMessageType = 1508
 
 type ShuffleReplyMessage struct {
 	ID    uint32
